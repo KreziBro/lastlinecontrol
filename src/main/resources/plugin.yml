@@ -1,0 +1,29 @@
+name: LastLineControl
+version: 1.2.1
+main: me.krejzibro.lastline.LastLineControl
+api-version: '1.21'
+
+commands:
+  fly:
+    description: Toggle fly mode
+    usage: /fly [ник]
+  god:
+    description: Toggle god mode
+    usage: /god [ник]
+  llc:
+    description: Main plugin command
+    usage: /llc reload
+
+permissions:
+  lastline.admin:
+    description: Full admin access (reload, fly/god for others)
+    default: op
+  lastline.god:
+    description: Use /god for yourself
+    default: false
+  lastline.fly:
+    description: Use /fly for yourself
+    default: false
+  lastline.bypass.pickup:
+    description: Bypass pickup restriction in god/fly mode
+    default: false
