@@ -28,7 +28,6 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
 
     private static final String PROJECT_ID = "GvX5Lmcy";
 
-    // null = ещё не проверяли, "" = актуальная, "1.x.x" = доступна новая версия
     private String latestVersion = null;
 
     @Override
@@ -50,7 +49,6 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
 
     @SuppressWarnings("deprecation")
     private void checkUpdates() {
-        // getDescription().getVersion() — наиболее стабильный способ получить версию
         String currentVersion = getDescription().getVersion();
 
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
@@ -121,7 +119,6 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
         @Nullable String rawPrefix = getConfig().getString("messages.prefix");
         String prefix = (rawPrefix != null ? rawPrefix : "§6[Сервер] ").replace("&", "§");
 
-        // ── /llc ───────────────────────────────────────────────────────────
         if (cmd.getName().equalsIgnoreCase("llc")) {
             if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("lastline.admin")) {
@@ -136,7 +133,6 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
             return true;
         }
 
-        // ── /god ───────────────────────────────────────────────────────────
         if (cmd.getName().equalsIgnoreCase("god")) {
 
             if (args.length > 0) {
@@ -166,8 +162,7 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
             toggleGod(player, prefix);
             return true;
         }
-
-        // ── /fly ───────────────────────────────────────────────────────────
+        
         if (cmd.getName().equalsIgnoreCase("fly")) {
 
             if (args.length > 0) {
