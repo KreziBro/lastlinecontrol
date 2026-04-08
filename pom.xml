@@ -6,7 +6,7 @@
 
     <groupId>me.krejzibro</groupId>
     <artifactId>lastlinecontrol</artifactId>
-    <version>1.2.1</version>
+    <version>1.2.2</version>
     <packaging>jar</packaging>
 
     <name>LastLineControl</name>
@@ -15,6 +15,23 @@
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- CVE-2025-48924: upgrade commons-lang3 -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.17.0</version>
+            </dependency>
+            <!-- CVE-2025-67030: upgrade plexus-utils -->
+            <dependency>
+                <groupId>org.codehaus.plexus</groupId>
+                <artifactId>plexus-utils</artifactId>
+                <version>4.0.2</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>

@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,8 +26,10 @@ import java.util.UUID;
 @SuppressWarnings("unused")
 public class LastLineControl extends JavaPlugin implements Listener, CommandExecutor {
     private final HashSet<UUID> activeGod = new HashSet<>();
+    private final HashSet<UUID> activeFly = new HashSet<>();
 
     private static final String PROJECT_ID = "GvX5Lmcy";
+    private static final String PERSISTENCE_KEY = "persistence";
 
     private String latestVersion = null;
 
@@ -40,6 +43,8 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
         registerCommand("fly");
         registerCommand("llc");
 
+        loadPersistence();
+
         if (getConfig().getBoolean("settings.check-updates", true)) {
             checkUpdates();
         } else {
@@ -47,10 +52,228 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
         }
     }
 
+    @Override
+    public void onDisable() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            savePlayerState(p);
+        }
+        savePersistenceConfig();
+    }
+
+    // ─── Persistence ──────────────────────────────────────────────────────────
+
+    private void loadPersistence() {
+        activeGod.clear();
+        activeFly.clear();
+
+        if (getConfig().isList(PERSISTENCE_KEY + ".god")) {
+            for (String s : getConfig().getStringList(PERSISTENCE_KEY + ".god")) {
+                try { activeGod.add(UUID.fromString(s)); } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        if (getConfig().isList(PERSISTENCE_KEY + ".fly")) {
+            for (String s : getConfig().getStringList(PERSISTENCE_KEY + ".fly")) {
+                try { activeFly.add(UUID.fromString(s)); } catch (IllegalArgumentException ignored) {}
+            }
+        }
+
+        getLogger().info("Loaded " + activeGod.size() + " god entries, " + activeFly.size() + " fly entries.");
+    }
+
+    private void savePersistenceConfig() {
+        getConfig().set(PERSISTENCE_KEY + ".god",
+                activeGod.stream().map(UUID::toString).toList());
+        getConfig().set(PERSISTENCE_KEY + ".fly",
+                activeFly.stream().map(UUID::toString).toList());
+        saveConfig();
+    }
+
+    private void savePlayerState(@NotNull Player player) {
+        UUID uid = player.getUniqueId();
+        if (player.getAllowFlight()) {
+            activeFly.add(uid);
+        } else {
+            activeFly.remove(uid);
+        }
+        savePersistenceConfig();
+    }
+
+    // ─── Events ───────────────────────────────────────────────────────────────
+
+    @EventHandler
+    public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        restorePlayerState(player);
+
+        if (player.hasPermission("lastline.admin")
+                && getConfig().getBoolean("settings.check-updates", true)
+                && latestVersion != null && !latestVersion.isEmpty()) {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                player.sendMessage("§6[LastLineControl] §fДоступна новая версия: §a" + latestVersion);
+                player.sendMessage("§6[LastLineControl] §fСкачать: §bhttps://modrinth.com/plugin/" + PROJECT_ID);
+            }, 40L);
+        }
+    }
+
+    private void restorePlayerState(@NotNull Player player) {
+        UUID uid = player.getUniqueId();
+        if (activeGod.contains(uid)) {
+            player.setInvulnerable(true);
+        }
+        if (activeFly.contains(uid)) {
+            player.setAllowFlight(true);
+            player.setFlying(true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
+        savePlayerState(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onPickup(@NotNull EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        if (player.hasPermission("lastline.bypass.pickup")) return;
+        if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) return;
+
+        if (activeGod.contains(player.getUniqueId()) && getConfig().getBoolean("settings.disable-pickup-in-god", true)) {
+            event.setCancelled(true);
+            player.sendActionBar(Component.text("§fВы не можете подобрать вы находитесь в режиме §6/god"));
+            return;
+        }
+
+        if (player.isFlying() && getConfig().getBoolean("settings.disable-pickup-in-fly", true)) {
+            event.setCancelled(true);
+            player.sendActionBar(Component.text("§fВы не можете подобрать вы находитесь в режиме §6/fly"));
+        }
+    }
+
+    // ─── Commands ─────────────────────────────────────────────────────────────
+
+    @Override
+    @SuppressWarnings("NullableProblems")
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
+        @Nullable String rawPrefix = getConfig().getString("messages.prefix");
+        String prefix = (rawPrefix != null ? rawPrefix : "§6[Сервер] ").replace("&", "§");
+
+        if (cmd.getName().equalsIgnoreCase("llc")) {
+            if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+                if (!sender.hasPermission("lastline.admin")) {
+                    sender.sendMessage(prefix + "§cУ вас нет прав!");
+                    return true;
+                }
+                reloadConfig();
+                loadPersistence();
+                sender.sendMessage(prefix + "§aКонфигурация успешно перезагружена!");
+                return true;
+            }
+            sender.sendMessage(prefix + "§fИспользуйте: §6/llc reload");
+            return true;
+        }
+
+        if (cmd.getName().equalsIgnoreCase("god")) {
+            if (args.length > 0) {
+                if (!sender.hasPermission("lastline.admin")) {
+                    sender.sendMessage(prefix + "§cУ вас нет прав для выдачи режима бога другим игрокам!");
+                    return true;
+                }
+                Player target = resolveTarget(sender, args, prefix);
+                if (target == null) return true;
+                toggleGod(target, prefix);
+                String statusWord = activeGod.contains(target.getUniqueId()) ? "§aвключён" : "§cвыключен";
+                sender.sendMessage(prefix + "§fРежим бога для §6" + target.getName() + " §f" + statusWord);
+                return true;
+            }
+
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(prefix + "§cКонсоль должна указать ник: §f/god <ник>");
+                return true;
+            }
+            if (!player.hasPermission("lastline.god")) {
+                player.sendMessage(prefix + "§cУ вас нет прав на использование этой команды!");
+                return true;
+            }
+            toggleGod(player, prefix);
+            return true;
+        }
+
+        if (cmd.getName().equalsIgnoreCase("fly")) {
+            if (args.length > 0) {
+                if (!sender.hasPermission("lastline.admin")) {
+                    sender.sendMessage(prefix + "§cУ вас нет прав для выдачи полёта другим игрокам!");
+                    return true;
+                }
+                Player target = resolveTarget(sender, args, prefix);
+                if (target == null) return true;
+                toggleFly(target, prefix);
+                String statusWord = activeFly.contains(target.getUniqueId()) ? "§aвключён" : "§cвыключен";
+                sender.sendMessage(prefix + "§fРежим полёта для §6" + target.getName() + " §f" + statusWord);
+                return true;
+            }
+
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(prefix + "§cКонсоль должна указать ник: §f/fly <ник>");
+                return true;
+            }
+            if (!player.hasPermission("lastline.fly")) {
+                player.sendMessage(prefix + "§cУ вас нет прав на использование этой команды!");
+                return true;
+            }
+            toggleFly(player, prefix);
+            return true;
+        }
+
+        return true;
+    }
+
+    // ─── Toggle helpers ───────────────────────────────────────────────────────
+
+    private void toggleGod(@NotNull Player player, @NotNull String prefix) {
+        if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) {
+            player.sendMessage(prefix + "§cВы в креативе/наблюдателе и не можете использовать режим бога!");
+            return;
+        }
+        UUID uid = player.getUniqueId();
+        if (activeGod.contains(uid)) {
+            activeGod.remove(uid);
+            player.setInvulnerable(false);
+            player.sendMessage(prefix + "§fРежим бога §cвыключен");
+        } else {
+            activeGod.add(uid);
+            player.setInvulnerable(true);
+            player.sendMessage(prefix + "§fРежим бога §aвключен");
+        }
+        savePersistenceConfig();
+    }
+
+    private void toggleFly(@NotNull Player player, @NotNull String prefix) {
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            player.sendMessage(prefix + "§cВ режиме наблюдателя полёт нельзя изменить!");
+            return;
+        }
+        UUID uid = player.getUniqueId();
+        boolean canFlyBefore = player.getAllowFlight();
+        player.setAllowFlight(!canFlyBefore);
+        if (canFlyBefore && player.isFlying()) {
+            player.setFlying(false);
+        }
+        if (canFlyBefore) {
+            activeFly.remove(uid);
+        } else {
+            activeFly.add(uid);
+        }
+        String status = !canFlyBefore ? "§aвключен" : "§cвыключен";
+        player.sendMessage(prefix + "§fРежим полёта " + status);
+        savePersistenceConfig();
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
     @SuppressWarnings("deprecation")
     private void checkUpdates() {
         String currentVersion = getDescription().getVersion();
-
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             try {
                 java.net.URL url = new URI(
@@ -83,24 +306,20 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
         });
     }
 
-    @EventHandler
-    public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        if (!player.hasPermission("lastline.admin")) return;
-        if (!getConfig().getBoolean("settings.check-updates", true)) return;
-        if (latestVersion == null || latestVersion.isEmpty()) return;
-
-        Bukkit.getScheduler().runTaskLater(this, () -> {
-            player.sendMessage("§6[LastLineControl] §fДоступна новая версия: §a" + latestVersion);
-            player.sendMessage("§6[LastLineControl] §fСкачать: §bhttps://modrinth.com/plugin/" + PROJECT_ID);
-        }, 40L);
-    }
-
     private void registerCommand(@NotNull String name) {
         PluginCommand command = getCommand(name);
         if (command != null) {
             command.setExecutor(this);
         }
+    }
+
+    @Nullable
+    private Player resolveTarget(@NotNull CommandSender sender, @NotNull String[] args, @NotNull String prefix) {
+        Player target = findPlayer(args[0]);
+        if (target == null) {
+            sender.sendMessage(prefix + "§cИгрок §f" + args[0] + " §cне найден или не в сети!");
+        }
+        return target;
     }
 
     @Nullable
@@ -111,137 +330,5 @@ public class LastLineControl extends JavaPlugin implements Listener, CommandExec
             }
         }
         return null;
-    }
-
-    @Override
-    @SuppressWarnings("NullableProblems")
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
-        @Nullable String rawPrefix = getConfig().getString("messages.prefix");
-        String prefix = (rawPrefix != null ? rawPrefix : "§6[Сервер] ").replace("&", "§");
-
-        if (cmd.getName().equalsIgnoreCase("llc")) {
-            if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
-                if (!sender.hasPermission("lastline.admin")) {
-                    sender.sendMessage(prefix + "§cУ вас нет прав!");
-                    return true;
-                }
-                reloadConfig();
-                sender.sendMessage(prefix + "§aКонфигурация успешно перезагружена!");
-                return true;
-            }
-            sender.sendMessage(prefix + "§fИспользуйте: §6/llc reload");
-            return true;
-        }
-
-        if (cmd.getName().equalsIgnoreCase("god")) {
-
-            if (args.length > 0) {
-                if (!sender.hasPermission("lastline.admin")) {
-                    sender.sendMessage(prefix + "§cУ вас нет прав для выдачи режима бога другим игрокам!");
-                    return true;
-                }
-                Player target = findPlayer(args[0]);
-                if (target == null) {
-                    sender.sendMessage(prefix + "§cИгрок §f" + args[0] + " §cне найден или не в сети!");
-                    return true;
-                }
-                toggleGod(target, prefix);
-                String statusWord = activeGod.contains(target.getUniqueId()) ? "§aвключён" : "§cвыключен";
-                sender.sendMessage(prefix + "§fРежим бога для §6" + target.getName() + " §f" + statusWord);
-                return true;
-            }
-
-            if (!(sender instanceof Player player)) {
-                sender.sendMessage(prefix + "§cКонсоль должна указать ник: §f/god <ник>");
-                return true;
-            }
-            if (!player.hasPermission("lastline.god")) {
-                player.sendMessage(prefix + "§cУ вас нет прав на использование этой команды!");
-                return true;
-            }
-            toggleGod(player, prefix);
-            return true;
-        }
-        
-        if (cmd.getName().equalsIgnoreCase("fly")) {
-
-            if (args.length > 0) {
-                if (!sender.hasPermission("lastline.admin")) {
-                    sender.sendMessage(prefix + "§cУ вас нет прав для выдачи полёта другим игрокам!");
-                    return true;
-                }
-                Player target = findPlayer(args[0]);
-                if (target == null) {
-                    sender.sendMessage(prefix + "§cИгрок §f" + args[0] + " §cне найден или не в сети!");
-                    return true;
-                }
-                toggleFly(target, prefix);
-                String statusWord = target.getAllowFlight() ? "§aвключён" : "§cвыключен";
-                sender.sendMessage(prefix + "§fРежим полёта для §6" + target.getName() + " §f" + statusWord);
-                return true;
-            }
-
-            if (!(sender instanceof Player player)) {
-                sender.sendMessage(prefix + "§cКонсоль должна указать ник: §f/fly <ник>");
-                return true;
-            }
-            if (!player.hasPermission("lastline.fly")) {
-                player.sendMessage(prefix + "§cУ вас нет прав на использование этой команды!");
-                return true;
-            }
-            toggleFly(player, prefix);
-            return true;
-        }
-
-        return true;
-    }
-
-    private void toggleGod(@NotNull Player player, @NotNull String prefix) {
-        if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) {
-            player.sendMessage(prefix + "§cВы в креативе/наблюдателе и не можете использовать режим бога!");
-            return;
-        }
-        if (activeGod.contains(player.getUniqueId())) {
-            activeGod.remove(player.getUniqueId());
-            player.setInvulnerable(false);
-            player.sendMessage(prefix + "§fРежим бога §cвыключен");
-        } else {
-            activeGod.add(player.getUniqueId());
-            player.setInvulnerable(true);
-            player.sendMessage(prefix + "§fРежим бога §aвключен");
-        }
-    }
-
-    private void toggleFly(@NotNull Player player, @NotNull String prefix) {
-        if (player.getGameMode() == GameMode.SPECTATOR) {
-            player.sendMessage(prefix + "§cВ режиме наблюдателя полёт нельзя изменить!");
-            return;
-        }
-        boolean canFlyBefore = player.getAllowFlight();
-        player.setAllowFlight(!canFlyBefore);
-        if (canFlyBefore && player.isFlying()) {
-            player.setFlying(false);
-        }
-        String status = !canFlyBefore ? "§aвключен" : "§cвыключен";
-        player.sendMessage(prefix + "§fРежим полёта " + status);
-    }
-
-    @EventHandler
-    public void onPickup(@NotNull EntityPickupItemEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
-
-        if (player.hasPermission("lastline.bypass.pickup")) return;
-        if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) return;
-
-        if (activeGod.contains(player.getUniqueId()) && getConfig().getBoolean("settings.disable-pickup-in-god", true)) {
-            event.setCancelled(true);
-            player.sendActionBar(Component.text("§fВы не можете подобрать вы находитесь в режиме §6/god"));
-            return;
-        }
-
-        if (player.isFlying() && getConfig().getBoolean("settings.disable-pickup-in-fly", true)) {
-            event.setCancelled(true);
-            player.sendActionBar(Component.text("§fВы не можете подобрать вы находитесь в режиме §6/fly"));
-        }
     }
 }
