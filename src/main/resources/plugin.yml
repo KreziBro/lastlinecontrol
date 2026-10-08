@@ -1,22 +1,22 @@
 name: LastLineControl
-version: 1.2.1
+version: 1.2.3
 main: me.krejzibro.lastline.LastLineControl
 api-version: '1.21'
 
 commands:
   fly:
     description: Toggle fly mode
-    usage: /fly [ник]
+    usage: /fly [nick]
   god:
     description: Toggle god mode
-    usage: /god [ник]
+    usage: /god [nick]
   llc:
     description: Main plugin command
-    usage: /llc reload
+    usage: /llc reload|debug
 
 permissions:
   lastline.admin:
-    description: Full admin access (reload, fly/god for others)
+    description: Full admin access
     default: op
   lastline.god:
     description: Use /god for yourself
@@ -25,5 +25,36 @@ permissions:
     description: Use /fly for yourself
     default: false
   lastline.bypass.pickup:
-    description: Bypass pickup restriction in god/fly mode
+    default: false
+  lastline.bypass.block-break:
+    default: false
+  lastline.bypass.block-place:
+    default: false
+  lastline.bypass.drop-item:
+    default: false
+  lastline.bypass.pvp:
+    default: false
+  lastline.bypass.hit-mob:
+    default: false
+  lastline.bypass.chest:
+    default: false
+  lastline.bypass.containers:
+    default: false
+  lastline.bypass.interact-bow:
+    default: false
+  lastline.bypass.interact-crystal:
+    default: false
+  lastline.bypass.interact-flint:
+    default: false
+  lastline.bypass.interact-enderchest:
+    default: false
+  lastline.bypass.interact-shulker:
+    default: false
+  lastline.bypass.interact-entities:
+    default: false
+  lastline.bypass.projectiles:
+    default: false
+  lastline.bypass.vehicles:
+    default: false
+  lastline.bypass.spawn-eggs:
     default: false

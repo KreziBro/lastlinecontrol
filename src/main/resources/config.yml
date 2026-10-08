@@ -1,7 +1,39 @@
 settings:
   disable-pickup-in-god: true
   disable-pickup-in-fly: true
+  disable-block-break-in-god: true
+  disable-block-break-in-fly: true
+  disable-block-place-in-god: true
+  disable-block-place-in-fly: true
+  disable-drop-item-in-god: true
+  disable-drop-item-in-fly: true
+  disable-pvp-in-god: true
+  disable-pvp-in-fly: true
+  disable-hit-mob-in-god: true
+  disable-hit-mob-in-fly: true
+  disable-chest-in-god: true
+  disable-chest-in-fly: true
+  disable-containers-in-god: true
+  disable-containers-in-fly: true
+  disable-interact-bow-in-god: true
+  disable-interact-bow-in-fly: true
+  disable-interact-crystal-in-god: true
+  disable-interact-crystal-in-fly: true
+  disable-interact-flint-in-god: true
+  disable-interact-flint-in-fly: true
+  disable-interact-enderchest-in-god: true
+  disable-interact-enderchest-in-fly: true
+  disable-interact-shulker-in-god: true
+  disable-interact-shulker-in-fly: true
+  disable-interact-entities-in-god: true
+  disable-interact-entities-in-fly: true
+  disable-projectiles-in-god: true
+  disable-projectiles-in-fly: true
+  disable-vehicles-in-god: true
+  disable-vehicles-in-fly: true
+  disable-spawn-eggs-in-god: true
+  disable-spawn-eggs-in-fly: true
   check-updates: true
 
 messages:
-  prefix: "§x§B§3§6§7§1§2§lL§x§B§5§6§A§1§6§la§x§B§6§6§C§1§9§ls§x§B§8§6§F§1§D§lt§x§B§9§7§1§2§0§lL§x§B§B§7§4§2§4§li§x§B§C§7§6§2§7§ln§x§B§E§7§9§2§B§le§x§B§F§7§B§2§F§lC§x§C§1§7§E§3§2§lo§x§C§2§8§0§3§6§ln§x§C§4§8§3§3§9§lt§x§C§5§8§5§3§D§lr§x§C§7§8§8§4§0§lo§x§C§8§8§A§4§4§ll "
+  prefix: "&6[&lServer&6] &r"
