@@ -1,55 +1,79 @@
 # LastLineControl
 
-PaperMC plugin for Minecraft 1.21+ that provides fly and god mode with persistent state and fine-grained action restrictions.
+<p align="center">
+  <a href="https://papermc.io"><img src="https://img.shields.io/badge/Платформа-PaperMC_1.21+-1976D2?style=for-the-badge&logo=minecraft&logoColor=white" alt="PaperMC 1.21+"></a>
+  <a href="https://oracle.com/java"><img src="https://img.shields.io/badge/Среда-Java_21-ED8B00?style=for-the-badge&logo=java&logoColor=white" alt="Java 21"></a>
+  <a href="https://maven.apache.org"><img src="https://img.shields.io/badge/Сборка-Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven"></a>
+  <a href="https://modrinth.com"><img src="https://img.shields.io/badge/Обновления-Modrinth_API-00AF5C?style=for-the-badge&logo=modrinth&logoColor=white" alt="Modrinth"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Лицензия-MIT-gray?style=for-the-badge" alt="Лицензия"></a>
+</p>
 
-## Features
+Высокопроизводительный серверный плагин для PaperMC (Minecraft 1.21+), предоставляющий профессиональное управление режимами полета (`/fly`) и неуязвимости (`/god`) с надежным сохранением состояния игроков между перезапусками сервера и тонкой системой ограничений действий.
 
-- `/fly` and `/god` — toggle per-player with state saved across restarts
-- Restrictions in fly/god — block break, PVP, item pickup, projectiles, vehicles, containers and more — all configurable
-- Bypass permissions — grant specific players the ability to ignore certain restrictions
-- Admin commands — toggle fly/god for any online player
-- Update checker — automatically notifies admins about new versions via Modrinth
+Идеально подходит для серверов выживания, анархии и гриф-проектов: предотвращает абьюзы механик полета и бессмертия при фарме ресурсов и в сражениях благодаря гибко настраиваемым bypass-разрешениям.
 
-## Commands
+## Основные возможности
 
-| Command | Description | Permission |
+* **Персистентность состояний**: Режимы `/fly` и `/god` надежно сохраняются при выходе игрока с сервера и полных перезапусках инстанса.
+* **Глубокая матрица ограничений**: Возможность выборочно блокировать в режимах полета и бога ломание/установку блоков, PVP-урон, поднятие дропа, взаимодействие с контейнерами, сундуками Края, кристаллами Энда и транспортом.
+* **Гибкая система обхода (Bypass Permissions)**: Выдача привилегированным группам прав на игнорирование конкретных ограничений.
+* **Административное управление**: Управление режимами полета и бога для любых игроков на сервере прямо из консоли или чата.
+* **Автопроверка обновлений**: Встроенный чекер новых версий через официальное API Modrinth с автоматическим уведомлением операторов сервера при входе.
+
+## Команды
+
+| Команда | Описание | Право доступа |
 |---|---|---|
-| `/fly` | Toggle fly for yourself | `lastline.fly` |
-| `/fly <nick>` | Toggle fly for another player | `lastline.admin` |
-| `/god` | Toggle god mode for yourself | `lastline.god` |
-| `/god <nick>` | Toggle god mode for another player | `lastline.admin` |
-| `/llc reload` | Reload config | `lastline.admin` |
+| `/fly` | Переключить режим полета для себя | `lastline.fly` |
+| `/fly <никнейм>` | Переключить полет для указанного игрока | `lastline.admin` |
+| `/god` | Переключить режим неуязвимости для себя | `lastline.god` |
+| `/god <никнейм>` | Переключить бессмертие для другого игрока | `lastline.admin` |
+| `/llc reload` | Горячая перезагрузка конфигурационных файлов | `lastline.admin` |
 
-## Permissions
+## Права доступа (Permissions)
 
-| Permission | Description | Default |
+| Право | Назначение | Значение по умолчанию |
 |---|---|---|
-| `lastline.admin` | Full admin access | op |
-| `lastline.fly` | Use /fly for yourself | false |
-| `lastline.god` | Use /god for yourself | false |
-| `lastline.bypass.<action>` | Bypass a specific restriction | false |
+| `lastline.admin` | Полный административный доступ к командам плагина | `op` |
+| `lastline.fly` | Использование команды `/fly` для себя | `false` |
+| `lastline.god` | Использование команды `/god` для себя | `false` |
+| `lastline.bypass.<действие>` | Право на обход конкретного ограничения | `false` |
 
-Available bypass actions: `pickup`, `block-break`, `block-place`, `drop-item`, `pvp`, `hit-mob`, `chest`, `containers`, `interact-bow`, `interact-crystal`, `interact-flint`, `interact-enderchest`, `interact-shulker`, `interact-entities`, `projectiles`, `vehicles`, `spawn-eggs`
+### Доступные действия для bypass:
+`pickup`, `block-break`, `block-place`, `drop-item`, `pvp`, `hit-mob`, `chest`, `containers`, `interact-bow`, `interact-crystal`, `interact-flint`, `interact-enderchest`, `interact-shulker`, `interact-entities`, `projectiles`, `vehicles`, `spawn-eggs`.
 
-## Installation
+## Быстрый старт
 
-1. Drop `lastlinecontrol-x.x.x.jar` into your server's `plugins/` folder
-2. Restart the server
-3. Edit `plugins/LastLineControl/config.yml` if needed
-4. `/llc reload` to apply changes without restarting
+### Установка плагина
+1. Поместите скомпилированный файл `lastlinecontrol-x.x.x.jar` в папку `plugins/` вашего сервера.
+2. Перезапустите сервер или загрузите плагин через менеджер плагинов.
+3. Отредактируйте сгенерированный файл `plugins/LastLineControl/config.yml` под правила вашего проекта.
+4. Выполните команду `/llc reload` для применения изменений без перезагрузки сервера.
 
-## Building from source
+### Сборка из исходников
 
 ```bash
-git clone https://github.com/KreziBro/lastlinecontrol
+# Клонирование репозитория
+git clone https://github.com/KreziBro/lastlinecontrol.git
 cd lastlinecontrol
-mvn package
+
+# Компиляция jar через Maven
+mvn clean package
 ```
 
-The compiled jar will be in `target/`.
+Готовый артефакт появится в каталоге `target/`.
 
-## Stack
+## Стек технологий
 
-- [PaperMC](https://papermc.io/) - server API
-- Java 21
-- Maven
+* **Платформа**: [PaperMC](https://papermc.io/) API (Minecraft 1.21+)
+* **Язык**: Java 21
+* **Система сборки**: Apache Maven
+
+## Сообщество и поддержка
+
+* Официальный Telegram канал разработчика: https://t.me/KreziBro_dev
+* Поддержать развитие проекта на платформе Ko-fi: https://ko-fi.com/krejzibro
+
+## Лицензия
+
+Распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
